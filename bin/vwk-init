@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+
+const inquirer = require('inquirer')
+const program = require('commander')
+const downLoad = require('download-git-repo')
+const ora = require('ora')
+const os = require('os')
+const path = require('path')
+const fs = require('fs')
+const rm = require('rimraf').sync
+const generate = require('../lib/generate')
+
+/**
+ * 命令行定义
+ */
+program
+  .usage('<project-name> [-r]')
+  .option('-r, --repository [Value]', '自定义模板地址','github:Lost-Kun/Vue-Webpack-Koa2')
+
+/**
+ * 帮助信息
+ */
+program.on('--help', () => {
+  console.log()
+  console.log('  例如:')
+  console.log()
+  console.log('    # 创建一个默认的Vue+Webpack+Koa2项目')
+  console.log('    $ vwk init my-project')
+  console.log()
+  console.log('    # 根据自定义模板创建项目')
+  console.log('    $ vwk init my-project -r github:Lost-Kun/Vue-Webpack-Koa2')
+  console.log()
+})
+
+/**
+ * Help.
+ */
+
+function help () {
+  program.parse(process.argv)
+  if (program.args.length < 1) return program.help()
+}
+help()
+
+let repository = program.repository
+let projectName = program.args[0]
+let tmp = path.join(os.homedir(), '.vwk-templates', repository.split('/')[1])
+let to = path.resolve(projectName)
+downloadAndGenerate()
+
+/**
+ * 下载模板并开始构建
+ *
+ */
+function downloadAndGenerate () {
+  const spinner = ora('下载模板中..')
+  spinner.start()
+  if(fs.existsSync(tmp)) rm(tmp)
+  downLoad(repository, tmp, (err)=>{
+    spinner.stop()
+    if(err){
+        console.log(err);
+        return;
+    }
+    //调用构建函数
+    generate(projectName, tmp, to, (err)=>{
+      if(err){
+        console.log(err)
+        return
+      }
+      console.log()
+      console.log('项目已生成成功')
+    })
+  })
+}
